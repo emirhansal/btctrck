@@ -17,8 +17,8 @@ class _$CoinService extends CoinService {
   final definitionType = CoinService;
 
   @override
-  Future<Response<Popular>> getCoinData() {
-    final $url = 'https://rest.coinapi.io/v1/exchangerate';
+  Future<Response<Popular>> getCoinData(String crypto, String currency) {
+    final $url = 'exchangerate/${crypto}/${currency}';
     final $request = Request('GET', $url, client.baseUrl);
     return client.send<Popular, Popular>($request);
   }

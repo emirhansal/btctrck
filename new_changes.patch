@@ -1,0 +1,809 @@
+Index: btc/lib/main.dart
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/btc/lib/main.dart b/btc/lib/main.dart
+--- a/btc/lib/main.dart	(revision 06a3c933c7fec189ac1e9cee4e6015be76d2cc68)
++++ b/btc/lib/main.dart	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
+@@ -1,32 +1,20 @@
+ import 'package:btc/service/coin_service.dart';
+ import 'package:btc/views/price_view.dart';
+-import 'package:btc/views/price_view_model.dart';
+ import 'package:flutter/material.dart';
+ import 'package:provider/provider.dart';
+ 
+-void main() {
+-  runApp(const MyApp());
+-}
++void main() => runApp(const MyApp());
+ 
+ class MyApp extends StatelessWidget {
+   const MyApp({Key? key}) : super(key: key);
+ 
+   @override
+-  Widget build(BuildContext context) {
+-    return Provider(
+-      create: (BuildContext context) {
+-        CoinService.create();
+-      },
+-      child: MaterialApp(
+-          title: 'Flutter Demo',
+-          theme: ThemeData(
+-            primarySwatch: Colors.blue,
+-          ),
+-          home: ChangeNotifierProvider(
+-            create: (context) => PriceViewModel(),
+-            child: const PriceView(),
+-          )),
+-    );
+-    ;
+-  }
++  Widget build(BuildContext context) => Provider(
++        create: (_) => CoinService.create(),
++        child: MaterialApp(
++          title: 'Coin Tracker',
++          theme: ThemeData(primarySwatch: Colors.blue),
++          home: const PriceView(),
++        ),
++      );
+ }
+Index: btc/lib/views/price_view.dart
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/btc/lib/views/price_view.dart b/btc/lib/views/price_view.dart
+--- a/btc/lib/views/price_view.dart	(revision 06a3c933c7fec189ac1e9cee4e6015be76d2cc68)
++++ b/btc/lib/views/price_view.dart	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
+@@ -1,131 +1,63 @@
+-import 'dart:io';
+-
++import 'package:btc/constants.dart';
++import 'package:btc/service/coin_service.dart';
+ import 'package:btc/views/price_view_model.dart';
+-import 'package:flutter/cupertino.dart';
+ import 'package:flutter/material.dart';
+-import 'package:flutter/src/foundation/key.dart';
+-import 'package:flutter/src/widgets/framework.dart';
+ import 'package:provider/provider.dart';
+ import 'package:stacked/stacked.dart';
+ 
+-import '../service/coin_service.dart';
+-
+-class PriceView extends StatefulWidget {
++class PriceView extends StatelessWidget {
+   const PriceView({Key? key}) : super(key: key);
+ 
+   @override
+-  State<PriceView> createState() => _PriceViewState();
+-}
+-
+-class _PriceViewState extends State<PriceView> {
+-  String selectedCurrency = 'AUD';
+-
+-  DropdownButton<String> androidDropdown() {
+-    List<DropdownMenuItem<String>> dropdownItems = [];
+-    for (String currency in currenciesList) {
+-      var newItem = DropdownMenuItem(
+-        child: Text(currency),
+-        value: currency,
+-      );
+-      dropdownItems.add(newItem);
+-    }
+-
+-    return DropdownButton<String>(
+-      value: selectedCurrency,
+-      items: dropdownItems,
+-      onChanged: (value) {
+-        setState(() {
+-          selectedCurrency = value!;
+-          getData();
+-        });
+-      },
+-    );
+-  }
+-
+-  CupertinoPicker iOSPicker() {
+-    List<Text> pickerItems = [];
+-    for (String currency in currenciesList) {
+-      pickerItems.add(Text(currency));
+-    }
+-
+-    return CupertinoPicker(
+-      backgroundColor: Colors.lightBlue,
+-      itemExtent: 32.0,
+-      onSelectedItemChanged: (selectedIndex) {
+-        setState(() {
+-          selectedCurrency = currenciesList[selectedIndex];
+-          getData();
+-        });
+-      },
+-      children: pickerItems,
+-    );
+-  }
+-
+-  Map<String, String> coinValues = {};
+-  bool isWaiting = false;
+-
+-  void getData() async {
+-    isWaiting = true;
+-    try {
+-      final response = await PriceViewModel().getCoinData(selectedCurrency);
+-      print(response);
+-      isWaiting = false;
+-      setState(() {
+-        coinValues = response as Map<String, String>;
+-      });
+-    } catch (e) {
+-      print(e);
+-    }
+-  }
+-
+-  @override
+-  void initState() {
+-    super.initState();
+-    getData();
+-  }
+-
+-  Column makeCards() {
+-    List<CryptoCard> cryptoCards = [];
+-    for (String crypto in cryptoList) {
+-      cryptoCards.add(
+-        CryptoCard(
+-          cryptoCurrency: crypto,
+-          selectedCurrency: selectedCurrency,
+-          value: isWaiting ? '?' : coinValues[crypto],
+-        ),
+-      );
+-    }
+-    return Column(
+-      crossAxisAlignment: CrossAxisAlignment.stretch,
+-      children: cryptoCards,
+-    );
+-  }
+-
+-  @override
+-  Widget build(BuildContext context) {
+-    return ViewModelBuilder.reactive(
+-        viewModelBuilder: () => PriceViewModel(),
+-        builder: (context, model, child) => Scaffold(
+-              appBar: AppBar(
+-                title: Text('🤑 Coin Ticker'),
+-              ),
+-              body: Column(
+-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+-                crossAxisAlignment: CrossAxisAlignment.stretch,
+-                children: <Widget>[
+-                  makeCards(),
+-                  Container(
+-                    height: 150.0,
+-                    alignment: Alignment.center,
+-                    padding: EdgeInsets.only(bottom: 30.0),
+-                    color: Colors.lightBlue,
+-                    child: Platform.isIOS ? iOSPicker() : androidDropdown(),
+-                  ),
+-                ],
+-              ),
+-            ));
+-  }
++  Widget build(BuildContext context) =>
++      ViewModelBuilder<PriceViewModel>.reactive(
++          viewModelBuilder: () => PriceViewModel(),
++          onModelReady: (model) => model.init(context.read<CoinService>()),
++          builder: (context, model, child) => Scaffold(
++                appBar: AppBar(title: const Text('🤑 Coin Ticker')),
++                body: Column(
++                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
++                  crossAxisAlignment: CrossAxisAlignment.stretch,
++                  children: <Widget>[
++                    Column(
++                      crossAxisAlignment: CrossAxisAlignment.stretch,
++                      children: [
++                        for (String crypto in Constants.cryptoList)
++                          CryptoCard(
++                            cryptoCurrency: crypto,
++                            selectedCurrency: model.selectedCurrency,
++                            value: model.isWaiting
++                                ? '?'
++                                : model.coinValues[crypto],
++                          )
++                      ],
++                    ),
++                    Container(
++                      height: 150.0,
++                      alignment: Alignment.center,
++                      padding: const EdgeInsets.only(bottom: 30.0),
++                      color: Colors.lightBlue,
++                      child: dropdown(
++                        model.selectedCurrency,
++                        model.setCurrency,
++                      ),
++                    ),
++                  ],
++                ),
++              ));
+ }
++
++DropdownButton<String> dropdown(
++  String currency,
++  Function(String?) onChanged,
++) =>
++    DropdownButton<String>(
++      value: currency,
++      items: Constants.currenciesList
++          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
++          .toList(),
++      onChanged: onChanged,
++    );
+ 
+ class CryptoCard extends StatelessWidget {
+   const CryptoCard({
+@@ -141,7 +73,7 @@
+   @override
+   Widget build(BuildContext context) {
+     return Padding(
+-      padding: EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
++      padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
+       child: Card(
+         color: Colors.lightBlueAccent,
+         elevation: 5.0,
+@@ -149,11 +81,11 @@
+           borderRadius: BorderRadius.circular(10.0),
+         ),
+         child: Padding(
+-          padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
++          padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
+           child: Text(
+             '1 $cryptoCurrency = $value $selectedCurrency',
+             textAlign: TextAlign.center,
+-            style: TextStyle(
++            style: const TextStyle(
+               fontSize: 20.0,
+               color: Colors.white,
+             ),
+Index: btc/lib/views/price_view_model.dart
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/btc/lib/views/price_view_model.dart b/btc/lib/views/price_view_model.dart
+--- a/btc/lib/views/price_view_model.dart	(revision 06a3c933c7fec189ac1e9cee4e6015be76d2cc68)
++++ b/btc/lib/views/price_view_model.dart	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
+@@ -1,63 +1,42 @@
+-import 'dart:convert';
+-import 'dart:ffi';
++import 'package:btc/constants.dart';
++import 'package:btc/models/popular.dart';
+ import 'package:btc/service/coin_service.dart';
+ import 'package:chopper/chopper.dart';
+ import 'package:flutter/cupertino.dart';
+ import 'package:flutter/material.dart';
+-import 'package:http/http.dart' as http;
+-import 'package:provider/provider.dart';
+-
+-const List<String> currenciesList = [
+-  'AUD',
+-  'BRL',
+-  'CAD',
+-  'CNY',
+-  'EUR',
+-  'GBP',
+-  'HKD',
+-  'IDR',
+-  'ILS',
+-  'INR',
+-  'JPY',
+-  'MXN',
+-  'NOK',
+-  'NZD',
+-  'PLN',
+-  'RON',
+-  'RUB',
+-  'SEK',
+-  'SGD',
+-  'USD',
+-  'ZAR'
+-];
+-
+-const List<String> cryptoList = [
+-  'BTC',
+-  'ETH',
+-  'LTC',
+-];
+-
+-const coinAPIURL = 'https://rest.coinapi.io/v1/exchangerate';
+-const apiKey = 'B3E0CB5E-65A1-4252-8968-4097005091E4';
+ 
+ class PriceViewModel extends ChangeNotifier {
+- 
+-  Future getCoinData(String selectedCurrency) async {
+-    Map<String, String> cryptoPrices = {}; //keep rates
+-    for (String crypto in cryptoList) {
+-      String requestURL =
+-          '$coinAPIURL/$crypto/$selectedCurrency?apikey=$apiKey';
+-      http.Response response = await http.get(Uri.parse(requestURL));
++  late CoinService _service;
++  late String selectedCurrency;
++  Map<String, String> coinValues = {};
++  bool isWaiting = false;
++
++  init(CoinService service) {
++    _service = service;
++    chopperLogger.onRecord.listen(print);
++    setCurrency(Constants.currenciesList.first);
++  }
++
++  Future getCoinData() async {
++    isWaiting = true;
++    notifyListeners();
++    Map<String, String> cryptoPrices = {};
++    for (String crypto in Constants.cryptoList) {
++      Response<Popular> response =
++          await _service.getCoinData(crypto, selectedCurrency);
+       if (response.statusCode == 200) {
+-        var decodedData = jsonDecode(response.body);
+-        double price = decodedData['rate']; //get rate from decodedData
+-        cryptoPrices[crypto] = price.toStringAsFixed(0); //add to map
+-      } else {
+-        print(response.statusCode);
+-        throw 'Problem with the get request';
++        cryptoPrices[crypto] =
++            response.body?.rate.toStringAsFixed(0) ?? 'unknown';
+       }
+     }
+-    return cryptoPrices;
++    isWaiting = false;
++    coinValues = cryptoPrices;
++    notifyListeners();
+   }
++
++  setCurrency(String? currency) {
++    if (currency == null) return;
++    selectedCurrency = currency;
++    getCoinData();
++  }
+ }
+-
+Index: btc/lib/constants.dart
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/btc/lib/constants.dart b/btc/lib/constants.dart
+new file mode 100644
+--- /dev/null	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
++++ b/btc/lib/constants.dart	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
+@@ -0,0 +1,36 @@
++class Constants {
++  Constants._();
++
++  static const List<String> currenciesList = [
++    'AUD',
++    'BRL',
++    'CAD',
++    'CNY',
++    'EUR',
++    'GBP',
++    'HKD',
++    'IDR',
++    'ILS',
++    'INR',
++    'JPY',
++    'MXN',
++    'NOK',
++    'NZD',
++    'PLN',
++    'RON',
++    'RUB',
++    'SEK',
++    'SGD',
++    'USD',
++    'ZAR'
++  ];
++
++  static const List<String> cryptoList = [
++    'BTC',
++    'ETH',
++    'LTC',
++  ];
++
++  static const coinAPIURL = 'https://rest.coinapi.io/v1';
++  static const apiKey = 'B3E0CB5E-65A1-4252-8968-4097005091E4';
++}
+Index: btc/lib/models/popular.dart
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/btc/lib/models/popular.dart b/btc/lib/models/popular.dart
+--- a/btc/lib/models/popular.dart	(revision 0a47fe7730219dd53758a6bfbf40e0d765ff95d2)
++++ b/btc/lib/models/popular.dart	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
+@@ -1,57 +1,14 @@
+-import 'package:json_annotation/json_annotation.dart';
+-import 'dart:convert';
+-import 'package:http/http.dart' as http;
++import 'package:built_value/built_value.dart';
++import 'package:built_value/serializer.dart';
+ 
+-const List<String> currenciesList = [
+-  'AUD',
+-  'BRL',
+-  'CAD',
+-  'CNY',
+-  'EUR',
+-  'GBP',
+-  'HKD',
+-  'IDR',
+-  'ILS',
+-  'INR',
+-  'JPY',
+-  'MXN',
+-  'NOK',
+-  'NZD',
+-  'PLN',
+-  'RON',
+-  'RUB',
+-  'SEK',
+-  'SGD',
+-  'USD',
+-  'ZAR'
+-];
++part 'popular.g.dart';
+ 
+-const List<String> cryptoList = [
+-  'BTC',
+-  'ETH',
+-  'LTC',
+-];
++abstract class Popular implements Built<Popular, PopularBuilder> {
++  static Serializer<Popular> get serializer => _$popularSerializer;
+ 
+-const coinAPIURL = 'https://rest.coinapi.io/v1/exchangerate';
+-const apiKey = 'B3E0CB5E-65A1-4252-8968-4097005091E4';
++  double get rate;
+ 
+-@JsonSerializable()
+-class Popular {
+-  Popular();
+-  Popular.fromJson(String selectedCurrency) {
+-    Map<String, String> cryptoPrices = {}; //keep rates
+-    for (String crypto in cryptoList) {
+-      String requestURL =
+-          '$coinAPIURL/$crypto/$selectedCurrency?apikey=$apiKey';
+-      http.Response response = http.get(Uri.parse(requestURL)) as http.Response;
+-      if (response.statusCode == 200) {
+-        var decodedData = jsonDecode(response.body);
+-        double price = decodedData['rate']; //get rate from decodedData
+-        cryptoPrices[crypto] = price.toStringAsFixed(0); //add to map
+-      } else {
+-        print(response.statusCode);
+-        throw 'Problem with the get request';
+-      }
+-    }
+-  }
++  Popular._();
++
++  factory Popular([void Function(PopularBuilder) updates]) = _$Popular;
+ }
+Index: btc/lib/models/popular.g.dart
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/btc/lib/models/popular.g.dart b/btc/lib/models/popular.g.dart
+new file mode 100644
+--- /dev/null	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
++++ b/btc/lib/models/popular.g.dart	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
+@@ -0,0 +1,128 @@
++// GENERATED CODE - DO NOT MODIFY BY HAND
++
++part of 'popular.dart';
++
++// **************************************************************************
++// BuiltValueGenerator
++// **************************************************************************
++
++Serializer<Popular> _$popularSerializer = new _$PopularSerializer();
++
++class _$PopularSerializer implements StructuredSerializer<Popular> {
++  @override
++  final Iterable<Type> types = const [Popular, _$Popular];
++  @override
++  final String wireName = 'Popular';
++
++  @override
++  Iterable<Object?> serialize(Serializers serializers, Popular object,
++      {FullType specifiedType = FullType.unspecified}) {
++    final result = <Object?>[
++      'rate',
++      serializers.serialize(object.rate, specifiedType: const FullType(double)),
++    ];
++
++    return result;
++  }
++
++  @override
++  Popular deserialize(Serializers serializers, Iterable<Object?> serialized,
++      {FullType specifiedType = FullType.unspecified}) {
++    final result = new PopularBuilder();
++
++    final iterator = serialized.iterator;
++    while (iterator.moveNext()) {
++      final key = iterator.current! as String;
++      iterator.moveNext();
++      final Object? value = iterator.current;
++      switch (key) {
++        case 'rate':
++          result.rate = serializers.deserialize(value,
++              specifiedType: const FullType(double))! as double;
++          break;
++      }
++    }
++
++    return result.build();
++  }
++}
++
++class _$Popular extends Popular {
++  @override
++  final double rate;
++
++  factory _$Popular([void Function(PopularBuilder)? updates]) =>
++      (new PopularBuilder()..update(updates))._build();
++
++  _$Popular._({required this.rate}) : super._() {
++    BuiltValueNullFieldError.checkNotNull(rate, r'Popular', 'rate');
++  }
++
++  @override
++  Popular rebuild(void Function(PopularBuilder) updates) =>
++      (toBuilder()..update(updates)).build();
++
++  @override
++  PopularBuilder toBuilder() => new PopularBuilder()..replace(this);
++
++  @override
++  bool operator ==(Object other) {
++    if (identical(other, this)) return true;
++    return other is Popular && rate == other.rate;
++  }
++
++  @override
++  int get hashCode {
++    return $jf($jc(0, rate.hashCode));
++  }
++
++  @override
++  String toString() {
++    return (newBuiltValueToStringHelper(r'Popular')..add('rate', rate))
++        .toString();
++  }
++}
++
++class PopularBuilder implements Builder<Popular, PopularBuilder> {
++  _$Popular? _$v;
++
++  double? _rate;
++  double? get rate => _$this._rate;
++  set rate(double? rate) => _$this._rate = rate;
++
++  PopularBuilder();
++
++  PopularBuilder get _$this {
++    final $v = _$v;
++    if ($v != null) {
++      _rate = $v.rate;
++      _$v = null;
++    }
++    return this;
++  }
++
++  @override
++  void replace(Popular other) {
++    ArgumentError.checkNotNull(other, 'other');
++    _$v = other as _$Popular;
++  }
++
++  @override
++  void update(void Function(PopularBuilder)? updates) {
++    if (updates != null) updates(this);
++  }
++
++  @override
++  Popular build() => _build();
++
++  _$Popular _build() {
++    final _$result = _$v ??
++        new _$Popular._(
++            rate: BuiltValueNullFieldError.checkNotNull(
++                rate, r'Popular', 'rate'));
++    replace(_$result);
++    return _$result;
++  }
++}
++
++// ignore_for_file: always_put_control_body_on_new_line,always_specify_types,annotate_overrides,avoid_annotating_with_dynamic,avoid_as,avoid_catches_without_on_clauses,avoid_returning_this,deprecated_member_use_from_same_package,lines_longer_than_80_chars,no_leading_underscores_for_local_identifiers,omit_local_variable_types,prefer_expression_function_bodies,sort_constructors_first,test_types_in_equals,unnecessary_const,unnecessary_new,unnecessary_lambdas
+Index: btc/lib/service/coin_service.chopper.dart
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/btc/lib/service/coin_service.chopper.dart b/btc/lib/service/coin_service.chopper.dart
+--- a/btc/lib/service/coin_service.chopper.dart	(revision 0a47fe7730219dd53758a6bfbf40e0d765ff95d2)
++++ b/btc/lib/service/coin_service.chopper.dart	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
+@@ -17,8 +17,8 @@
+   final definitionType = CoinService;
+ 
+   @override
+-  Future<Response<Popular>> getCoinData() {
+-    final $url = 'https://rest.coinapi.io/v1/exchangerate';
++  Future<Response<Popular>> getCoinData(String crypto, String currency) {
++    final $url = 'exchangerate/${crypto}/${currency}';
+     final $request = Request('GET', $url, client.baseUrl);
+     return client.send<Popular, Popular>($request);
+   }
+Index: btc/lib/service/coin_service.dart
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/btc/lib/service/coin_service.dart b/btc/lib/service/coin_service.dart
+--- a/btc/lib/service/coin_service.dart	(revision 0a47fe7730219dd53758a6bfbf40e0d765ff95d2)
++++ b/btc/lib/service/coin_service.dart	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
+@@ -1,22 +1,40 @@
++import 'package:btc/constants.dart';
++import 'package:btc/models/popular.dart';
++import 'package:built_value/serializer.dart';
++import 'package:built_value/standard_json_plugin.dart';
+ import 'package:chopper/chopper.dart';
+-import '../models/popular.dart';
++import 'package:chopper_built_value/chopper_built_value.dart';
+ 
+ part 'coin_service.chopper.dart';
++part 'coin_service.g.dart';
+ 
+-@ChopperApi(baseUrl: 'https://rest.coinapi.io/v1/exchangerate')
++@ChopperApi()
+ abstract class CoinService extends ChopperService {
+-  @Get()
+-  Future<Response<Popular>> getCoinData();
++  @Get(path: 'exchangerate/{crypto}/{currency}')
++  Future<Response<Popular>> getCoinData(
++    @Path() String crypto,
++    @Path() String currency,
++  );
+ 
+   static CoinService create() {
+-    const url = 'https://rest.coinapi.io/v1/exchangerate';
++    final builder = serializers.toBuilder();
++    builder.addPlugin(StandardJsonPlugin());
++    final jsonSerializers = builder.build();
++
+     final client = ChopperClient(
+-      baseUrl: url,
+-      converter: JsonConverter(),
+-      services: [
+-        _$CoinService(),
+-      ],
+-    );
++        baseUrl: Constants.coinAPIURL,
++        converter: BuiltValueConverter(jsonSerializers),
++        interceptors: [
++          (Request req) => req.copyWith(
++                parameters: Map<String, dynamic>.from(req.parameters)
++                  ..['apiKey'] = Constants.apiKey,
++              ),
++        ]);
+     return _$CoinService(client);
+   }
+ }
++
++@SerializersFor([
++  Popular,
++])
++final Serializers serializers = _$serializers;
+Index: btc/lib/service/coin_service.g.dart
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/btc/lib/service/coin_service.g.dart b/btc/lib/service/coin_service.g.dart
+new file mode 100644
+--- /dev/null	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
++++ b/btc/lib/service/coin_service.g.dart	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
+@@ -0,0 +1,12 @@
++// GENERATED CODE - DO NOT MODIFY BY HAND
++
++part of 'coin_service.dart';
++
++// **************************************************************************
++// BuiltValueGenerator
++// **************************************************************************
++
++Serializers _$serializers =
++    (new Serializers().toBuilder()..add(Popular.serializer)).build();
++
++// ignore_for_file: always_put_control_body_on_new_line,always_specify_types,annotate_overrides,avoid_annotating_with_dynamic,avoid_as,avoid_catches_without_on_clauses,avoid_returning_this,deprecated_member_use_from_same_package,lines_longer_than_80_chars,no_leading_underscores_for_local_identifiers,omit_local_variable_types,prefer_expression_function_bodies,sort_constructors_first,test_types_in_equals,unnecessary_const,unnecessary_new,unnecessary_lambdas
+Index: btc/pubspec.lock
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/btc/pubspec.lock b/btc/pubspec.lock
+--- a/btc/pubspec.lock	(revision 0a47fe7730219dd53758a6bfbf40e0d765ff95d2)
++++ b/btc/pubspec.lock	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
+@@ -86,9 +86,16 @@
+     source: hosted
+     version: "5.1.1"
+   built_value:
+-    dependency: transitive
++    dependency: "direct main"
+     description:
+       name: built_value
++      url: "https://pub.dartlang.org"
++    source: hosted
++    version: "8.3.3"
++  built_value_generator:
++    dependency: "direct dev"
++    description:
++      name: built_value_generator
+       url: "https://pub.dartlang.org"
+     source: hosted
+     version: "8.3.3"
+@@ -120,6 +127,13 @@
+       url: "https://pub.dartlang.org"
+     source: hosted
+     version: "4.0.6"
++  chopper_built_value:
++    dependency: "direct main"
++    description:
++      name: chopper_built_value
++      url: "https://pub.dartlang.org"
++    source: hosted
++    version: "1.0.0"
+   chopper_generator:
+     dependency: "direct dev"
+     description:
+@@ -389,6 +403,13 @@
+       url: "https://pub.dartlang.org"
+     source: hosted
+     version: "1.2.0"
++  quiver:
++    dependency: transitive
++    description:
++      name: quiver
++      url: "https://pub.dartlang.org"
++    source: hosted
++    version: "3.1.0"
+   shelf:
+     dependency: transitive
+     description:
+Index: btc/pubspec.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/btc/pubspec.yaml b/btc/pubspec.yaml
+--- a/btc/pubspec.yaml	(revision 0a47fe7730219dd53758a6bfbf40e0d765ff95d2)
++++ b/btc/pubspec.yaml	(revision ea395ef32aa94a239a9dac5ce801db5c5212512d)
+@@ -38,8 +38,10 @@
+   stacked_services: ^0.9.1
+   json_annotation: ^4.5.0
+   chopper: ^4.0.6
++  built_value: ^8.3.3
+   provider: ^6.0.3
+   http: ^0.13.4
++  chopper_built_value: ^1.0.0
+ 
+ dev_dependencies:
+   flutter_test:
+@@ -54,6 +56,8 @@
+   build_runner: ^2.1.11
+   json_serializable: ^6.2.0
+   chopper_generator: ^4.0.6
++  built_value_generator: ^8.3.3
++
+ 
+ # For information on the generic Dart part of this file, see the
+ # following page: https://dart.dev/tools/pub/pubspec

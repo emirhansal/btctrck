@@ -1,131 +1,63 @@
-import 'dart:io';
-
+import 'package:btc/constants.dart';
+import 'package:btc/service/coin_service.dart';
 import 'package:btc/views/price_view_model.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/foundation/key.dart';
-import 'package:flutter/src/widgets/framework.dart';
 import 'package:provider/provider.dart';
 import 'package:stacked/stacked.dart';
 
-import '../service/coin_service.dart';
-
-class PriceView extends StatefulWidget {
+class PriceView extends StatelessWidget {
   const PriceView({Key? key}) : super(key: key);
 
   @override
-  State<PriceView> createState() => _PriceViewState();
+  Widget build(BuildContext context) =>
+      ViewModelBuilder<PriceViewModel>.reactive(
+          viewModelBuilder: () => PriceViewModel(),
+          onModelReady: (model) => model.init(context.read<CoinService>()),
+          builder: (context, model, child) => Scaffold(
+                appBar: AppBar(title: const Text('🤑 Coin Ticker')),
+                body: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (String crypto in Constants.cryptoList)
+                          CryptoCard(
+                            cryptoCurrency: crypto,
+                            selectedCurrency: model.selectedCurrency,
+                            value: model.isWaiting
+                                ? '?'
+                                : model.coinValues[crypto],
+                          )
+                      ],
+                    ),
+                    Container(
+                      height: 150.0,
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.only(bottom: 30.0),
+                      color: Colors.lightBlue,
+                      child: dropdown(
+                        model.selectedCurrency,
+                        model.setCurrency,
+                      ),
+                    ),
+                  ],
+                ),
+              ));
 }
 
-class _PriceViewState extends State<PriceView> {
-  String selectedCurrency = 'AUD';
-
-  DropdownButton<String> androidDropdown() {
-    List<DropdownMenuItem<String>> dropdownItems = [];
-    for (String currency in currenciesList) {
-      var newItem = DropdownMenuItem(
-        child: Text(currency),
-        value: currency,
-      );
-      dropdownItems.add(newItem);
-    }
-
-    return DropdownButton<String>(
-      value: selectedCurrency,
-      items: dropdownItems,
-      onChanged: (value) {
-        setState(() {
-          selectedCurrency = value!;
-          getData();
-        });
-      },
+DropdownButton<String> dropdown(
+  String currency,
+  Function(String?) onChanged,
+) =>
+    DropdownButton<String>(
+      value: currency,
+      items: Constants.currenciesList
+          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+          .toList(),
+      onChanged: onChanged,
     );
-  }
-
-  CupertinoPicker iOSPicker() {
-    List<Text> pickerItems = [];
-    for (String currency in currenciesList) {
-      pickerItems.add(Text(currency));
-    }
-
-    return CupertinoPicker(
-      backgroundColor: Colors.lightBlue,
-      itemExtent: 32.0,
-      onSelectedItemChanged: (selectedIndex) {
-        setState(() {
-          selectedCurrency = currenciesList[selectedIndex];
-          getData();
-        });
-      },
-      children: pickerItems,
-    );
-  }
-
-  Map<String, String> coinValues = {};
-  bool isWaiting = false;
-
-  void getData() async {
-    isWaiting = true;
-    try {
-      final response = await PriceViewModel().getCoinData(selectedCurrency);
-      print(response);
-      isWaiting = false;
-      setState(() {
-        coinValues = response as Map<String, String>;
-      });
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    getData();
-  }
-
-  Column makeCards() {
-    List<CryptoCard> cryptoCards = [];
-    for (String crypto in cryptoList) {
-      cryptoCards.add(
-        CryptoCard(
-          cryptoCurrency: crypto,
-          selectedCurrency: selectedCurrency,
-          value: isWaiting ? '?' : coinValues[crypto],
-        ),
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: cryptoCards,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ViewModelBuilder.reactive(
-        viewModelBuilder: () => PriceViewModel(),
-        builder: (context, model, child) => Scaffold(
-              appBar: AppBar(
-                title: Text('🤑 Coin Ticker'),
-              ),
-              body: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  makeCards(),
-                  Container(
-                    height: 150.0,
-                    alignment: Alignment.center,
-                    padding: EdgeInsets.only(bottom: 30.0),
-                    color: Colors.lightBlue,
-                    child: Platform.isIOS ? iOSPicker() : androidDropdown(),
-                  ),
-                ],
-              ),
-            ));
-  }
-}
 
 class CryptoCard extends StatelessWidget {
   const CryptoCard({
@@ -141,7 +73,7 @@ class CryptoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
+      padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
       child: Card(
         color: Colors.lightBlueAccent,
         elevation: 5.0,
@@ -149,11 +81,11 @@ class CryptoCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(10.0),
         ),
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
+          padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
           child: Text(
             '1 $cryptoCurrency = $value $selectedCurrency',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 20.0,
               color: Colors.white,
             ),
